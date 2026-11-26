@@ -15,6 +15,7 @@
             android:exported="true"
             android:label="@string/app_name"
             android:theme="@style/Theme.NoAI_test_App"
+            android:screenOrientation="portrait"
             android:windowSoftInputMode="adjustResize"
             android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize">
             <intent-filter>

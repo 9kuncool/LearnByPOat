@@ -1,5 +1,6 @@
 package com.example.noai_test_app
 
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -75,19 +76,17 @@ fun MainApp(modifier: Modifier = Modifier, viewModel: HouseViewModel = viewModel
                 HomeScreen(
                     houses = viewModel.housesList,
                     onHouseClick = { house ->
-                        val index = viewModel.housesList.indexOfFirst { it.houseNumber == house.houseNumber }
-                        if (index != -1) {
-                            navController.navigate("detail/$index")
-                        }
+                        navController.navigate("detail/${Uri.encode(house.houseNumber)}")
                     }
                 )
             }
             composable(
-                route = "detail/{houseIndex}",
-                arguments = listOf(navArgument("houseIndex") { type = NavType.IntType })
+                route = "detail/{houseNumber}",
+                arguments = listOf(navArgument("houseNumber") { type = NavType.StringType })
             ) { backStackEntry ->
-                val houseIndex = backStackEntry.arguments?.getInt("houseIndex") ?: 0
-                val house = viewModel.housesList.getOrNull(houseIndex)
+                val encodedHouseNumber = backStackEntry.arguments?.getString("houseNumber") ?: ""
+                val houseNumber = Uri.decode(encodedHouseNumber)
+                val house = viewModel.housesList.find { it.houseNumber == houseNumber }
 
                 if (house != null) {
                     HouseDetailScreen(
