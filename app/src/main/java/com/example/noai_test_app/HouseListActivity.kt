@@ -51,7 +51,7 @@ class HouseListActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     containerColor = Color.White,
                 ) { innerPadding ->
-                    HouseListApp(modifier = Modifier.padding(innerPadding))
+                    MainAppScreen(modifier = Modifier.padding(innerPadding))
                 }
             }
         }
@@ -59,7 +59,28 @@ class HouseListActivity : ComponentActivity() {
 }
 
 @Composable
-fun HouseListApp(modifier: Modifier = Modifier, viewModel: HouseViewModel = viewModel()) {
+fun MainAppScreen(modifier: Modifier = Modifier) {
+    var isLoggedIn by rememberSaveable { mutableStateOf(false) }
+
+    if (!isLoggedIn) {
+        LoginScreen(
+            onLoginSuccess = { isLoggedIn = true },
+            modifier = modifier,
+        )
+    } else {
+        HouseListApp(
+            onLogout = { isLoggedIn = false },
+            modifier = modifier,
+        )
+    }
+}
+
+@Composable
+fun HouseListApp(
+    modifier: Modifier = Modifier,
+    onLogout: () -> Unit = {},
+    viewModel: HouseViewModel = viewModel(),
+) {
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var selectedHouseNumber by rememberSaveable { mutableStateOf<String?>(null) }
 
@@ -70,7 +91,7 @@ fun HouseListApp(modifier: Modifier = Modifier, viewModel: HouseViewModel = view
         HouseDetailScreen(
             house = selectedHouse,
             onBackClick = { selectedHouseNumber = null },
-            onSaveSuccess = { _ -> },
+            onSaveSuccess = { },
             viewModel = viewModel,
             modifier = modifier,
         )
@@ -99,6 +120,15 @@ fun HouseListApp(modifier: Modifier = Modifier, viewModel: HouseViewModel = view
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
+                )
+                Text(
+                    text = "ออกจากระบบ",
+                    color = Color.White,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .clickable { onLogout() }
                 )
             }
 
