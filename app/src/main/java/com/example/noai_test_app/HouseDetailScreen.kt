@@ -20,6 +20,8 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -36,6 +38,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -53,10 +56,20 @@ fun HouseDetailScreen(
     viewModel: HouseViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
     modifier: Modifier = Modifier
 ) {
-    // ใช้ rememberSaveable เพื่อจดจำค่าข้อความ และสถานะข้ามการหมุนจอ (Configuration Change)
     var thisMonthText by rememberSaveable {
         mutableStateOf(house.currentMonthReading?.toString() ?: "")
     }
+    var selectedNote by rememberSaveable {
+        mutableStateOf(house.note ?: "ไม่มีหมายเหตุ")
+    }
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    val noteOptions = listOf(
+        "ไม่มีหมายเหตุ",
+        "มิเตอร์ชำรุด / มองไม่เห็นตัวเลข",
+        "สุนัขดุ / ไม่อนุญาตให้เข้าพื้นที่",
+        "บ้านปิด ไม่มีผู้อยู่อาศัย"
+    )
+
     var errorMessage by rememberSaveable { mutableStateOf<String?>(null) }
     var calculatedBillResult by rememberSaveable { mutableStateOf(house.calculatedBill) }
     val coroutineScope = rememberCoroutineScope()
@@ -65,31 +78,36 @@ fun HouseDetailScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(Color.White) // พื้นหลังหน้าสีขาว
+            .background(Color.White)
     ) {
-        // Top Header พร้อมปุ่มย้อนกลับ
-        Row(
+        // Top Header
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(Color.Blue)
                 .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+            contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = "← ย้อนกลับ",
-                color = Color.White,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier
-                    .clickable { onBackClick() }
-                    .padding(end = 16.dp)
-            )
             Text(
                 text = "บันทึกมิเตอร์น้ำ",
                 color = Color.White,
                 fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
             )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "← ย้อนกลับ",
+                    color = Color.White,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .clickable { onBackClick() }
+                )
+            }
         }
 
         Column(
@@ -97,7 +115,7 @@ fun HouseDetailScreen(
                 .fillMaxWidth()
                 .padding(20.dp)
         ) {
-            // การ์ดข้อมูลบ้าน
+            // House Info Card
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
@@ -148,12 +166,22 @@ fun HouseDetailScreen(
                             )
                         }
                     }
+
+                    if (!house.note.isNullOrBlank()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "หมายเหตุ: ${house.note}",
+                            fontSize = 14.sp,
+                            color = Color(0xFFB71C1C),
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // ส่วนป้อนข้อมูลเลขมิเตอร์
+            // Meter input & Note selection card (ทุกสถานะมีเหมือนกัน)
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
@@ -162,7 +190,7 @@ fun HouseDetailScreen(
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
                     Text(
-                        text = "กรอกข้อมูลมิเตอร์",
+                        text = "กรอกข้อมูลมิเตอร์และหมายเหตุ",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.Black
@@ -193,14 +221,12 @@ fun HouseDetailScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // ตรวจสอบความถูกต้องว่าสามารถกดบันทึกได้หรือไม่
                     val thisMonthVal = thisMonthText.toIntOrNull()
                     val isInputValid = thisMonthText.isNotBlank() &&
                             thisMonthVal != null &&
                             thisMonthVal >= house.lastMonthReading &&
                             errorMessage == null
 
-                    // กำหนดสีของ OutlinedTextField ตามสถานะความถูกต้อง
                     val textFieldColors = when {
                         errorMessage != null -> OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = Color.Red,
@@ -212,8 +238,8 @@ fun HouseDetailScreen(
                             unfocusedTextColor = Color.Black
                         )
                         isInputValid -> OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Color(0xFF2E7D32), // สีเขียวเหมือนปุ่ม
-                            unfocusedBorderColor = Color(0xFF2E7D32), // สีเขียวเหมือนปุ่ม
+                            focusedBorderColor = Color(0xFF2E7D32),
+                            unfocusedBorderColor = Color(0xFF2E7D32),
                             focusedLabelColor = Color(0xFF2E7D32),
                             unfocusedLabelColor = Color(0xFF2E7D32),
                             cursorColor = Color(0xFF2E7D32),
@@ -231,6 +257,9 @@ fun HouseDetailScreen(
                         value = thisMonthText,
                         onValueChange = { input ->
                             thisMonthText = input
+                            if (input.isNotBlank()) {
+                                selectedNote = "ไม่มีหมายเหตุ"
+                            }
                             val valInt = input.toIntOrNull()
                             if (input.isBlank()) {
                                 errorMessage = null
@@ -259,7 +288,6 @@ fun HouseDetailScreen(
                         shape = RoundedCornerShape(12.dp)
                     )
 
-                    // แสดงข้อความเตือนถ้ามีข้อผิดพลาด (เช่น เลขน้อยกว่าเดือนก่อน)
                     if (errorMessage != null) {
                         Text(
                             text = errorMessage!!,
@@ -270,30 +298,110 @@ fun HouseDetailScreen(
                         )
                     }
 
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // --- ปุ่มหมายเหตุ (อยู่ระหว่างช่องกรอกเดือนนี้ กับ ปุ่มบันทึกและคำนวณค่าน้ำ) ---
+                    Text(
+                        text = "หมายเหตุ (เลือกหากมีปัญหาในการอ่านมิเตอร์)",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    val isMeterFilled = thisMonthText.isNotBlank()
+                    val noteBoxColor = if (isMeterFilled) Color(0xFFE0E0E0) else Color(0xFFF5F5F5)
+                    val noteTextColor = if (isMeterFilled) Color.Gray else if (selectedNote == "ไม่มีหมายเหตุ") Color.Gray else Color(0xFFB71C1C)
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(noteBoxColor, RoundedCornerShape(8.dp))
+                            .then(
+                                if (!isMeterFilled) {
+                                    Modifier.clickable { expanded = true }
+                                } else {
+                                    Modifier
+                                }
+                            )
+                            .padding(14.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = if (isMeterFilled) "กรอกเลขมิเตอร์เดือนนี้แล้ว" else selectedNote,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = noteTextColor
+                            )
+                            if (!isMeterFilled) {
+                                Text(text = "▼", fontSize = 12.sp, color = Color.Gray)
+                            }
+                        }
+
+                        if (!isMeterFilled) {
+                            DropdownMenu(
+                                expanded = expanded,
+                                onDismissRequest = { expanded = false },
+                                modifier = Modifier.background(Color.White)
+                            ) {
+                                noteOptions.forEach { option ->
+                                    DropdownMenuItem(
+                                        text = { Text(option, color = Color.Black) },
+                                        onClick = {
+                                            selectedNote = option
+                                            expanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    // ปุ่มบันทึกข้อมูล
+                    // ปุ่มบันทึกและคำนวณค่าน้ำ
                     Button(
                         onClick = {
-                            if (thisMonthVal == null) return@Button
-
                             coroutineScope.launch {
                                 isSaving = true
-                                val result = viewModel.calculateAndSaveMeter(house, thisMonthVal)
-                                if (result != null) {
-                                    val (updatedHouse, bill) = result
+                                val finalNote = if (selectedNote == "ไม่มีหมายเหตุ") null else selectedNote
+                                val valInt = thisMonthText.toIntOrNull()
+
+                                if (valInt != null && valInt >= house.lastMonthReading) {
+                                    val bill = calcBill(house.lastMonthReading, valInt)
+                                    val updatedHouse = house.copy(
+                                        status = HouseStatus.RECORDED,
+                                        currentMonthReading = valInt,
+                                        calculatedBill = bill,
+                                        note = finalNote
+                                    )
+                                    viewModel.updateHouse(updatedHouse)
                                     calculatedBillResult = bill
+                                    onSaveSuccess(updatedHouse)
+                                } else if (finalNote != null) {
+                                    // กรณีเลือกหมายเหตุว่าอ่านไม่ได้ (เช่น ชำรุด/สุนัขดุ/บ้านปิด) โดยไม่กรอกเลขมิเตอร์
+                                    val updatedHouse = house.copy(
+                                        status = HouseStatus.UNREADABLE,
+                                        currentMonthReading = null,
+                                        calculatedBill = null,
+                                        note = finalNote
+                                    )
+                                    viewModel.updateHouse(updatedHouse)
                                     onSaveSuccess(updatedHouse)
                                 }
                                 isSaving = false
                             }
                         },
-                        enabled = isInputValid && !isSaving, // เปิด/ปิดปุ่มตามการตรวจสอบค่าเรียลไทม์
+                        enabled = (isInputValid || selectedNote != "ไม่มีหมายเหตุ") && !isSaving,
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF2E7D32), // สีเขียวเมื่อเปิดใช้งาน
-                            disabledContainerColor = Color(0xFFE0E0E0), // สีเทาเมื่อปิดใช้งาน
+                            containerColor = Color(0xFF2E7D32),
+                            disabledContainerColor = Color(0xFFE0E0E0),
                             contentColor = Color.White,
                             disabledContentColor = Color(0xFF9E9E9E)
                         )
@@ -318,8 +426,8 @@ fun HouseDetailScreen(
                         } else {
                             Text(
                                 text = when {
-                                    thisMonthText.isBlank() -> "โปรดกรอกตัวเลขมิเตอร์เดือนนี้"
-                                    !isInputValid -> "กรุณาแก้ไขเลขมิเตอร์ให้ถูกต้อง"
+                                    selectedNote != "ไม่มีหมายเหตุ" && !isInputValid -> "บันทึกหมายเหตุ (อ่านไม่ได้)"
+                                    !isInputValid -> "โปรดกรอกตัวเลขหรือเลือกหมายเหตุ"
                                     else -> "บันทึกและคำนวณค่าน้ำ"
                                 },
                                 fontSize = 16.sp,
@@ -331,7 +439,6 @@ fun HouseDetailScreen(
                 }
             }
 
-            // แสดงผลลัพธ์การคำนวณค่าน้ำเมื่อบันทึกสำเร็จ
             if (calculatedBillResult != null && errorMessage == null) {
                 Spacer(modifier = Modifier.height(20.dp))
                 Card(
@@ -375,15 +482,20 @@ fun HouseDetailScreen(
 @Composable
 fun HouseDetailScreenPreview() {
     NoAI_test_AppTheme {
-        HouseDetailScreen(
-            house = House(
-                houseNumber = "105/2",
-                ownerName = "สมชาย ใจดี",
-                status = HouseStatus.UNRECORDED,
-                lastMonthReading = 100
-            ),
-            onBackClick = {},
-            onSaveSuccess = {}
-        )
+        HouseDetailSectionPreviewContent()
     }
+}
+
+@Composable
+fun HouseDetailSectionPreviewContent() {
+    HouseDetailScreen(
+        house = House(
+            houseNumber = "105/2",
+            ownerName = "สมชาย ใจดี",
+            status = HouseStatus.UNRECORDED,
+            lastMonthReading = 100
+        ),
+        onBackClick = {},
+        onSaveSuccess = {}
+    )
 }

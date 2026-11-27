@@ -1,17 +1,16 @@
 package com.example.noai_test_app
 
-import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -35,13 +34,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavType
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
-import com.example.noai_test_app.example2.House
-import com.example.noai_test_app.example2.HouseStatus
+import com.example.noai_test_app.data.User
 import com.example.noai_test_app.ui.theme.NoAI_test_AppTheme
 
 class HouseListActivity : ComponentActivity() {
@@ -54,68 +47,21 @@ class HouseListActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     containerColor = Color.White
                 ) { innerPadding ->
-                    MainApp(modifier = Modifier.padding(innerPadding))
+                    UserApp(modifier = Modifier.padding(innerPadding))
                 }
             }
         }
     }
 }
 
-// ใช้ NavHost, navController และ ViewModel
 @Composable
-fun MainApp(modifier: Modifier = Modifier, viewModel: HouseViewModel = viewModel()) {
-    val navController = rememberNavController()
-
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(Color.White)
-    ) {
-        NavHost(navController = navController, startDestination = "home") {
-            composable("home") {
-                HomeScreen(
-                    houses = viewModel.housesList,
-                    onHouseClick = { house ->
-                        navController.navigate("detail/${Uri.encode(house.houseNumber)}")
-                    }
-                )
-            }
-            composable(
-                route = "detail/{houseNumber}",
-                arguments = listOf(navArgument("houseNumber") { type = NavType.StringType })
-            ) { backStackEntry ->
-                val encodedHouseNumber = backStackEntry.arguments?.getString("houseNumber") ?: ""
-                val houseNumber = Uri.decode(encodedHouseNumber)
-                val house = viewModel.housesList.find { it.houseNumber == houseNumber }
-
-                if (house != null) {
-                    HouseDetailScreen(
-                        house = house,
-                        onBackClick = { navController.popBackStack() },
-                        onSaveSuccess = { updatedHouse ->
-                            // อัปเดตข้อมูลใน ViewModel แต่ไม่สั่ง popBackStack() อัตโนมัติ เพื่อให้ผู้ใช้เห็นผลลัพธ์การคำนวณก่อน
-                            viewModel.updateHouse(updatedHouse)
-                        }
-                    )
-                }
-            }
-        }
-    }
-}
-
-// หน้าหลัก (รายการบ้าน)
-@Composable
-fun HomeScreen(
-    houses: List<House>,
-    onHouseClick: (House) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    // ใช้ rememberSaveable จำข้อความค้นหาเมื่อหมุนจอ
+fun UserApp(modifier: Modifier = Modifier, viewModel: UserViewModel = viewModel()) {
     var searchQuery by rememberSaveable { mutableStateOf("") }
 
-    val filteredHouses = houses.filter { house ->
-        house.houseNumber.contains(searchQuery, ignoreCase = true) ||
-                house.ownerName.contains(searchQuery, ignoreCase = true)
+    val filteredUsers = viewModel.usersList.filter { user ->
+        user.name.contains(searchQuery, ignoreCase = true) ||
+                user.email.contains(searchQuery, ignoreCase = true) ||
+                user.username.contains(searchQuery, ignoreCase = true)
     }
 
     Column(
@@ -123,138 +69,115 @@ fun HomeScreen(
             .fillMaxSize()
             .background(Color.White)
     ) {
-        TextHeader(title = "รายชื่อบ้าน")
-        SearchBar(
-            query = searchQuery,
-            onQueryChange = { searchQuery = it },
-            modifier = Modifier.padding(16.dp)
+        // Header
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color.Blue)
+                .padding(16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "รายชื่อผู้ใช้งาน (API)",
+                color = Color.White,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+        }
+
+        // Offline Banner Message (if offline)
+        if (viewModel.offlineMessage != null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFFFFF3CD))
+                    .padding(12.dp)
+            ) {
+                Text(
+                    text = viewModel.offlineMessage!!,
+                    color = Color(0xFF856404),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+
+        // Search Bar
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = { searchQuery = it },
+            placeholder = { Text("ค้นหาชื่อ, อีเมล...") },
+            singleLine = true,
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
         )
 
-        HouseList(
-            houses = filteredHouses,
-            onHouseClick = onHouseClick
-        )
-    }
-}
-
-@Composable
-fun TextHeader(title: String, modifier: Modifier = Modifier) {
-    Text(
-        text = title,
-        color = Color.White,
-        fontSize = 18.sp,
-        fontWeight = FontWeight.Bold,
-        modifier = modifier
-            .fillMaxWidth()
-            .background(Color.Blue)
-            .padding(16.dp),
-        textAlign = TextAlign.Center
-    )
-}
-
-@Composable
-fun SearchBar(
-    query: String,
-    onQueryChange: (String) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    OutlinedTextField(
-        value = query,
-        onValueChange = onQueryChange,
-        placeholder = { Text("ค้นหา...") },
-        singleLine = true,
-        shape = RoundedCornerShape(12.dp),
-        modifier = modifier.fillMaxWidth()
-    )
-}
-
-@Composable
-fun HouseList(
-    houses: List<House>,
-    onHouseClick: (House) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    LazyColumn(
-        modifier = modifier
-            .fillMaxSize()
-            .background(Color.White)
-    ) {
-        items(houses) { house ->
-            HouseItem(house = house, onClick = { onHouseClick(house) })
+        // User List
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.White)
+        ) {
+            items(filteredUsers) { user ->
+                UserItem(user = user)
+            }
         }
     }
 }
 
 @Composable
-fun HouseItem(
-    house: House,
-    onClick: () -> Unit
-) {
+fun UserItem(user: User) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp)
-            .clickable { onClick() },
+            .padding(horizontal = 16.dp, vertical = 6.dp),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(16.dp)
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "บ้านเลขที่: ${house.houseNumber}",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.Black
-                )
-                Text(
-                    text = "เจ้าของ: ${house.ownerName}",
-                    fontSize = 14.sp,
-                    color = Color.DarkGray,
-                    modifier = Modifier.padding(top = 4.dp)
-                )
-                if (house.calculatedBill != null) {
-                    Text(
-                        text = "ค่าน้ำ: ${house.calculatedBill} บาท",
-                        fontSize = 13.sp,
-                        color = Color(0xFF2E7D32),
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(top = 2.dp)
-                    )
-                }
-            }
-
-            val (statusText, statusTextColor, statusBgColor) = when (house.status) {
-                HouseStatus.RECORDED -> Triple("จดแล้ว", Color(0xFF1B5E20), Color(0xFFE8F5E9))
-                HouseStatus.UNRECORDED -> Triple("ยังไม่จด", Color(0xFF616161), Color(0xFFF5F5F5))
-                HouseStatus.UNREADABLE -> Triple("อ่านไม่ได้", Color(0xFFB71C1C), Color(0xFFFFEBEE))
-            }
-
-            Box(
-                modifier = Modifier
-                    .background(color = statusBgColor, shape = RoundedCornerShape(16.dp))
-                    .padding(horizontal = 12.dp, vertical = 6.dp)
-            ) {
-                Text(
-                    text = statusText,
-                    color = statusTextColor,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 13.sp
-                )
-            }
+            Text(
+                text = user.name,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Username: @${user.username}",
+                fontSize = 13.sp,
+                color = Color.DarkGray
+            )
+            Text(
+                text = "Email: ${user.email}",
+                fontSize = 13.sp,
+                color = Color.DarkGray
+            )
+            Text(
+                text = "Phone: ${user.phone}",
+                fontSize = 13.sp,
+                color = Color.DarkGray
+            )
+            Text(
+                text = "Website: ${user.website}",
+                fontSize = 13.sp,
+                color = Color(0xFF1976D2)
+            )
         }
     }
 }
 
 @Preview(showBackground = true)
 @Composable
-fun GreetingPreview() {
+fun UserAppPreview() {
     NoAI_test_AppTheme {
-        MainApp()
+        UserApp()
     }
 }

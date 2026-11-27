@@ -13,7 +13,8 @@ data class HouseEntity(
     val status: String, // Store HouseStatus name: RECORDED, UNRECORDED, UNREADABLE
     val lastMonthReading: Int,
     val currentMonthReading: Int?,
-    val calculatedBill: Int?
+    val calculatedBill: Int?,
+    val note: String?
 ) {
     fun toHouse(): House {
         return House(
@@ -22,7 +23,8 @@ data class HouseEntity(
             status = try { HouseStatus.valueOf(status) } catch (e: Exception) { HouseStatus.UNRECORDED },
             lastMonthReading = lastMonthReading,
             currentMonthReading = currentMonthReading,
-            calculatedBill = calculatedBill
+            calculatedBill = calculatedBill,
+            note = note
         )
     }
 
@@ -34,7 +36,8 @@ data class HouseEntity(
                 status = house.status.name,
                 lastMonthReading = house.lastMonthReading,
                 currentMonthReading = house.currentMonthReading,
-                calculatedBill = house.calculatedBill
+                calculatedBill = house.calculatedBill,
+                note = house.note
             )
         }
     }

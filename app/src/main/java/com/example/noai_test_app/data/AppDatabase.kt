@@ -11,9 +11,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-@Database(entities = [HouseEntity::class], version = 1, exportSchema = false)
+@Database(entities = [HouseEntity::class, UserEntity::class], version = 4, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun houseDao(): HouseDao
+    abstract fun userDao(): UserDao
 
     companion object {
         @Volatile
@@ -27,6 +28,7 @@ abstract class AppDatabase : RoomDatabase() {
                     "house_database"
                 )
                     .addCallback(HouseDatabaseCallback())
+                    .fallbackToDestructiveMigration(true)
                     .build()
                 INSTANCE = instance
                 instance
@@ -48,14 +50,14 @@ abstract class AppDatabase : RoomDatabase() {
             val initialHouses = listOf(
                 House("105/2", "สมชาย ใจดี", HouseStatus.RECORDED, lastMonthReading = 100, currentMonthReading = 115, calculatedBill = 85),
                 House("101/1", "สมหญิง รักเรียน", HouseStatus.UNRECORDED, lastMonthReading = 120),
-                House("110/5", "วิชัย กล้าหาญ", HouseStatus.UNREADABLE, lastMonthReading = 95),
+                House("110/5", "วิชัย กล้าหาญ", HouseStatus.UNREADABLE, note = "มิเตอร์ชำรุด / มองไม่เห็นตัวเลข"),
                 House("102/1", "สุดา มานะ", HouseStatus.UNRECORDED, lastMonthReading = 150),
                 House("108/3", "กิตติ พัฒนา", HouseStatus.RECORDED, lastMonthReading = 200, currentMonthReading = 215, calculatedBill = 85),
-                House("101/2", "นภา สดใส", HouseStatus.UNREADABLE, lastMonthReading = 80),
+                House("101/2", "นภา สดใส", HouseStatus.UNREADABLE, note = "สุนัขดุ / ไม่อนุญาตให้เข้าพื้นที่"),
                 House("104/1", "ประเสริฐ มั่งมี", HouseStatus.RECORDED, lastMonthReading = 310, currentMonthReading = 325, calculatedBill = 85),
                 House("109/1", "สมศักดิ์ ยินดี", HouseStatus.UNRECORDED, lastMonthReading = 140),
                 House("103/4", "อารี สุขใจ", HouseStatus.RECORDED, lastMonthReading = 220, currentMonthReading = 230, calculatedBill = 50),
-                House("106/2", "มานพ ขยันยิ่ง", HouseStatus.UNREADABLE, lastMonthReading = 175)
+                House("106/2", "มานพ ขยันยิ่ง", HouseStatus.UNREADABLE, note = "บ้านปิด ไม่มีผู้อยู่อาศัย")
             )
             dao.insertAll(initialHouses.map { HouseEntity.fromHouse(it) })
         }
