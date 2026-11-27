@@ -44,7 +44,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.noai_test_app.example2.House
 import com.example.noai_test_app.example2.HouseStatus
-import com.example.noai_test_app.example2.calcBill
 import com.example.noai_test_app.ui.theme.NoAI_test_AppTheme
 
 
@@ -74,6 +73,7 @@ fun HouseDetailScreen(
     var calculatedBillResult by rememberSaveable { mutableStateOf(house.calculatedBill) }
     val coroutineScope = rememberCoroutineScope()
     var isSaving by rememberSaveable { mutableStateOf(false) }
+    var isSaveSuccess by rememberSaveable { mutableStateOf(false) }
 
     Column(
         modifier = modifier
@@ -257,6 +257,7 @@ fun HouseDetailScreen(
                         value = thisMonthText,
                         onValueChange = { input ->
                             thisMonthText = input
+                            isSaveSuccess = false
                             if (input.isNotBlank()) {
                                 selectedNote = "ไม่มีหมายเหตุ"
                             }
@@ -353,6 +354,7 @@ fun HouseDetailScreen(
                                         text = { Text(option, color = Color.Black) },
                                         onClick = {
                                             selectedNote = option
+                                            isSaveSuccess = false
                                             expanded = false
                                         }
                                     )
@@ -368,22 +370,24 @@ fun HouseDetailScreen(
                         onClick = {
                             coroutineScope.launch {
                                 isSaving = true
+                                isSaveSuccess = false
                                 val finalNote = if (selectedNote == "ไม่มีหมายเหตุ") null else selectedNote
                                 val valInt = thisMonthText.toIntOrNull()
 
                                 if (valInt != null && valInt >= house.lastMonthReading) {
-                                    val bill = calcBill(house.lastMonthReading, valInt)
-                                    val updatedHouse = house.copy(
-                                        status = HouseStatus.RECORDED,
-                                        currentMonthReading = valInt,
-                                        calculatedBill = bill,
-                                        note = finalNote
-                                    )
-                                    viewModel.updateHouse(updatedHouse)
-                                    calculatedBillResult = bill
-                                    onSaveSuccess(updatedHouse)
+                                    val result = viewModel.calculateAndSaveMeter(house, valInt)
+                                    if (result != null) {
+                                        val (updatedHouse, bill) = result
+                                        val finalHouse = if (finalNote != null) updatedHouse.copy(note = finalNote) else updatedHouse
+                                        if (finalNote != null) {
+                                            viewModel.updateHouse(finalHouse)
+                                        }
+                                        calculatedBillResult = bill
+                                        isSaveSuccess = true
+                                        onSaveSuccess(finalHouse)
+                                    }
                                 } else if (finalNote != null) {
-                                    // กรณีเลือกหมายเหตุว่าอ่านไม่ได้ (เช่น ชำรุด/สุนัขดุ/บ้านปิด) โดยไม่กรอกเลขมิเตอร์
+                                    kotlinx.coroutines.delay(2000)
                                     val updatedHouse = house.copy(
                                         status = HouseStatus.UNREADABLE,
                                         currentMonthReading = null,
@@ -391,6 +395,7 @@ fun HouseDetailScreen(
                                         note = finalNote
                                     )
                                     viewModel.updateHouse(updatedHouse)
+                                    isSaveSuccess = true
                                     onSaveSuccess(updatedHouse)
                                 }
                                 isSaving = false
@@ -426,6 +431,7 @@ fun HouseDetailScreen(
                         } else {
                             Text(
                                 text = when {
+                                    isSaveSuccess -> "บันทึกเสร็จสิ้น"
                                     selectedNote != "ไม่มีหมายเหตุ" && !isInputValid -> "บันทึกหมายเหตุ (อ่านไม่ได้)"
                                     !isInputValid -> "โปรดกรอกตัวเลขหรือเลือกหมายเหตุ"
                                     else -> "บันทึกและคำนวณค่าน้ำ"
@@ -439,38 +445,73 @@ fun HouseDetailScreen(
                 }
             }
 
-            if (calculatedBillResult != null && errorMessage == null) {
+            if (isSaveSuccess && errorMessage == null) {
                 Spacer(modifier = Modifier.height(20.dp))
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9)),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(20.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                if (calculatedBillResult != null) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9)),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                     ) {
-                        Text(
-                            text = "คำนวณค่าน้ำสำเร็จ! ✅",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF1B5E20)
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "ยอดค่าน้ำที่ต้องชำระ",
-                            fontSize = 14.sp,
-                            color = Color.DarkGray
-                        )
-                        Text(
-                            text = "$calculatedBillResult บาท",
-                            fontSize = 28.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF2E7D32)
-                        )
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(20.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = "คำนวณค่าน้ำสำเร็จ! ✅",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF1B5E20)
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "ยอดค่าน้ำที่ต้องชำระ",
+                                fontSize = 14.sp,
+                                color = Color.DarkGray
+                            )
+                            Text(
+                                text = "$calculatedBillResult บาท",
+                                fontSize = 28.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF2E7D32)
+                            )
+                        }
+                    }
+                } else if (selectedNote != "ไม่มีหมายเหตุ") {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEBEE)),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(20.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = "บันทึกเสร็จสิ้น ✅",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFB71C1C)
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "บันทึกหมายเหตุเรียบร้อยแล้ว",
+                                fontSize = 14.sp,
+                                color = Color.DarkGray
+                            )
+                            Text(
+                                text = selectedNote,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFB71C1C)
+                            )
+                        }
                     }
                 }
             }
