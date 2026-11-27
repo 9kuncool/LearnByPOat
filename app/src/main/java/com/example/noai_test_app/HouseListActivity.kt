@@ -83,6 +83,7 @@ fun HouseListApp(
 ) {
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var selectedHouseNumber by rememberSaveable { mutableStateOf<String?>(null) }
+    var selectedStatusFilter by rememberSaveable { mutableStateOf<HouseStatus?>(null) }
 
     val houses = viewModel.housesList
     val selectedHouse = houses.find { (houseNumber) -> houseNumber == selectedHouseNumber }
@@ -97,8 +98,11 @@ fun HouseListApp(
         )
     } else {
         val filteredHouses = houses.filter { house ->
-            house.houseNumber.contains(searchQuery, ignoreCase = true) ||
-                    house.ownerName.contains(searchQuery, ignoreCase = true)
+            val matchesSearch = house.houseNumber.contains(searchQuery, ignoreCase = true) ||
+                    house.ownerName.contains(searchQuery, ignoreCase = true) ||
+                    house.status.label.contains(searchQuery, ignoreCase = true)
+            val matchesStatus = (selectedStatusFilter == null) || (house.status == selectedStatusFilter)
+            matchesSearch && matchesStatus
         }
 
         Column(
@@ -136,13 +140,49 @@ fun HouseListApp(
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                placeholder = { Text("ค้นหาบ้านเลขที่, ชื่อเจ้าของ...") },
+                placeholder = { Text("ค้นหาบ้านเลขที่, ชื่อเจ้าของ, สถานะ...") },
                 singleLine = true,
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp)
+                    .padding(horizontal = 16.dp, vertical = 10.dp)
             )
+
+            // Status Filter Chips
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                val filters = listOf(
+                    null to "ทั้งหมด",
+                    HouseStatus.UNRECORDED to "ยังไม่จด",
+                    HouseStatus.RECORDED to "จดแล้ว",
+                    HouseStatus.UNREADABLE to "อ่านไม่ได้"
+                )
+
+                filters.forEach { (status, label) ->
+                    val count = if (status == null) houses.size else houses.count { it.status == status }
+                    val isSelected = selectedStatusFilter == status
+                    val chipBgColor = if (isSelected) Color.Blue else Color(0xFFF0F0F0)
+                    val chipTextColor = if (isSelected) Color.White else Color.Black
+
+                    Box(
+                        modifier = Modifier
+                            .background(chipBgColor, shape = RoundedCornerShape(20.dp))
+                            .clickable { selectedStatusFilter = status }
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Text(
+                            text = "$label ($count)",
+                            fontSize = 13.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                            color = chipTextColor
+                        )
+                    }
+                }
+            }
 
             // House List
             LazyColumn(

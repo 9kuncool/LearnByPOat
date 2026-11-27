@@ -64,7 +64,8 @@ fun HouseDetailScreen(
     var expanded by rememberSaveable { mutableStateOf(false) }
     val noteOptions = listOf(
         "ไม่มีหมายเหตุ",
-        "มิเตอร์ชำรุด / มองไม่เห็นตัวเลข",
+        "มิเตอร์เสีย / ชำรุด",
+        "หามิเตอร์ไม่เจอ / มองไม่เห็นตัวเลข",
         "สุนัขดุ / ไม่อนุญาตให้เข้าพื้นที่",
         "บ้านปิด ไม่มีผู้อยู่อาศัย"
     )
