@@ -106,7 +106,11 @@ fun LoginScreen(
             isError = errorMessage != null,
             colors = OutlinedTextFieldDefaults.colors(
                 focusedTextColor = Color.Black,
-                unfocusedTextColor = Color.Black
+                unfocusedTextColor = Color.Black,
+                focusedBorderColor = Color.Blue,
+                unfocusedBorderColor = Color.Blue,
+                focusedLabelColor = Color.Blue,
+                unfocusedLabelColor = Color.Gray
             ),
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp)
@@ -140,7 +144,11 @@ fun LoginScreen(
             },
             colors = OutlinedTextFieldDefaults.colors(
                 focusedTextColor = Color.Black,
-                unfocusedTextColor = Color.Black
+                unfocusedTextColor = Color.Black,
+                focusedBorderColor = Color.Blue,
+                unfocusedBorderColor = Color.Blue,
+                focusedLabelColor = Color.Blue,
+                unfocusedLabelColor = Color.Gray
             ),
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp)
