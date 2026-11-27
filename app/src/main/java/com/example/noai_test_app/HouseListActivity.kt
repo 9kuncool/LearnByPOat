@@ -119,7 +119,7 @@ fun HouseListApp(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = "รายการบ้านและจดมิเตอร์น้ำ",
+                    text = "รายการบ้าน",
                     color = Color.White,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,

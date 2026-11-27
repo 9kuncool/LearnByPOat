@@ -50,11 +50,11 @@ fun main() { //list
     val keyword = "สม"
     println("\n=== 3. ผลการค้นหาเจ้าของบ้านที่มีคำว่า '$keyword' ===")
     val searchResults = houses.filter { it.ownerName.contains(keyword) }
-    
+
     if (searchResults.isEmpty()) {
         println("ไม่พบข้อมูลเจ้าของบ้านที่ค้นหา")
     } else {
-        searchResults.forEach { 
+        searchResults.forEach {
             println("บ้านเลขที่: ${it.houseNumber} | เจ้าของ: ${it.ownerName}")
         }
     }
